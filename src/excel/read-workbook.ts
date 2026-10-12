@@ -25,7 +25,7 @@ export async function readWorkbook(
   try {
     const module = await import("exceljs");
     const workbook = new module.default.Workbook();
-    await workbook.xlsx.load(buffer as unknown as Buffer);
+    await workbook.xlsx.load(buffer as Parameters<typeof workbook.xlsx.load>[0]);
 
     let best:
       | (WorkbookCandidate & { score: number; populatedRows: number })

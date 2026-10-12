@@ -145,14 +145,14 @@ export function buildReportModel(input: BuildReportInput): ReportModel {
     if (item.record.occurredAt > end) end = item.record.occurredAt;
   }
 
-  const topCarriers = [...carrierRows.entries()]
+  const allCarriers = [...carrierRows.entries()]
     .map(([name, rows]) => buildCarrier(name, rows))
     .sort(
       (left, right) =>
         right.registrations - left.registrations || localeSort(left.name, right.name),
     )
-    .slice(0, 20)
     .map((carrier, index) => ({ ...carrier, rank: index + 1 }));
+  const topCarriers = allCarriers.slice(0, 20);
 
   const rootCauses = aggregateRootCauses(classified);
   const unmatchedCount = rootCauses
@@ -196,6 +196,7 @@ export function buildReportModel(input: BuildReportInput): ReportModel {
       rejections,
       rejectionRate: classified.length ? rejections / classified.length : 0,
     },
+    allCarriers,
     topCarriers,
     rootCauses,
     hourlyTotals,

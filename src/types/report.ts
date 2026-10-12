@@ -61,6 +61,7 @@ export interface ReportWarning {
 export interface ReportModel {
   period: { start: Date; end: Date };
   totals: ReportTotals;
+  allCarriers: CarrierReport[];
   topCarriers: CarrierReport[];
   rootCauses: RootCauseTotal[];
   hourlyTotals: number[];

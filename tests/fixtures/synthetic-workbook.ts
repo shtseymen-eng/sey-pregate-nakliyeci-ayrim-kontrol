@@ -29,5 +29,5 @@ export async function makeSyntheticWorkbook(
   );
   for (const row of options.rows ?? []) sheet.addRow(row);
   const bytes = await workbook.xlsx.writeBuffer();
-  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return bytes as ArrayBuffer;
 }

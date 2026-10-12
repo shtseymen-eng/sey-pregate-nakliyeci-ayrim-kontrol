@@ -90,6 +90,7 @@ describe("buildReportModel", () => {
     });
 
     expect(model.topCarriers).toHaveLength(20);
+    expect(model.allCarriers).toHaveLength(22);
     expect(model.topCarriers[0].name).toBe("Firma A");
     expect(model.topCarriers[19].name).toBe("Firma T");
   });
