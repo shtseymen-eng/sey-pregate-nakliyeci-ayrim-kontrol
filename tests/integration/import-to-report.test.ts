@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normalizeRecords } from "@/analysis/normalize-records";
+import { buildReportModel } from "@/analysis/build-report";
 import { readWorkbook } from "@/excel/read-workbook";
 import { makeSyntheticWorkbook } from "../fixtures/synthetic-workbook";
 
@@ -51,5 +52,36 @@ describe("workbook import", () => {
     await expect(readWorkbook(new ArrayBuffer(8), "broken.xlsx")).rejects.toThrow(
       "açılamadı",
     );
+  });
+
+  it("keeps other departments out of period, ranking and rejections", async () => {
+    const bytes = await makeSyntheticWorkbook({
+      rows: [
+        ["10.05.2026", "09:00", "Poliport Terminal", "Firma 01", "Ürün A", "Onaylandı", "", "Müşteri A"],
+        ["20.05.2026", "10:00", "Poliport Terminal", "Firma 02", "Ürün B", "Red", "SRC5 yoktur", "Müşteri B"],
+        ["01.01.2020", "08:00", "Başka Departman", "Dev Firma", "Ürün X", "Red", "SRC5 yoktur", "Müşteri X"],
+        ["31.12.2030", "08:00", "Poliport Tank", "Dev Firma", "Ürün X", "Red", "SRC5 yoktur", "Müşteri X"],
+      ],
+    });
+    const candidate = await readWorkbook(bytes, "arac-kayit.xlsx");
+    const normalized = normalizeRecords(
+      candidate.rows,
+      candidate.suggestion.mapping as never,
+      candidate.headerRowNumber,
+    );
+    const model = buildReportModel({
+      records: normalized.records,
+      statusRules: {},
+      importSummary: {
+        ...normalized.departmentSummary,
+        invalidRows: normalized.invalidRows.length,
+        warnings: normalized.warnings,
+      },
+    });
+
+    expect(model.period.start.getFullYear()).toBe(2026);
+    expect(model.period.end.getFullYear()).toBe(2026);
+    expect(model.totals).toMatchObject({ registrations: 2, rejections: 1 });
+    expect(model.topCarriers.map((item) => item.name)).not.toContain("Dev Firma");
   });
 });
