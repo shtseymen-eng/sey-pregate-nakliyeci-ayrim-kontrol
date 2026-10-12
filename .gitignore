@@ -1,0 +1,15 @@
+node_modules/
+.npm-cache/
+dist/
+coverage/
+.DS_Store
+.env*
+.superpowers/
+uploads/
+downloads/
+outputs/
+*.xls
+*.xlsx
+!public/templates/terminal-ilk20-template.xlsx
+Terminal_Ilk20_*.xlsx
+npm-debug.log*
