@@ -69,3 +69,19 @@ export interface WorkbookCandidate {
   rows: unknown[][];
   suggestion: MappingSuggestion;
 }
+
+export type StatusDisposition = "red" | "not-red" | "exclude";
+export type StatusRuleMap = Record<string, StatusDisposition>;
+
+export interface UnknownStatus {
+  normalized: string;
+  label: string;
+  count: number;
+}
+
+export interface RootCauseMatch {
+  id: string;
+  label: string;
+  original: string;
+  matched: boolean;
+}
