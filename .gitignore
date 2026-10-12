@@ -13,3 +13,8 @@ outputs/
 !public/templates/terminal-ilk20-template.xlsx
 Terminal_Ilk20_*.xlsx
 npm-debug.log*
+*.tsbuildinfo
+/vite.config.js
+/vite.config.d.ts
+/vitest.config.js
+/vitest.config.d.ts
