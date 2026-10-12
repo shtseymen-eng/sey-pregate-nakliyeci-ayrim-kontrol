@@ -278,7 +278,7 @@ export async function buildReportWorkbook(
     sheet.state = "visible";
   }
 
-  workbook.creator = "Seymen Pregate Aylık Kontrol";
+  workbook.creator = "Sey-Pregate Nakliyeci Ayrım Kontrol";
   workbook.modified = new Date();
   const output = await workbook.xlsx.writeBuffer();
   return new Uint8Array(output);
