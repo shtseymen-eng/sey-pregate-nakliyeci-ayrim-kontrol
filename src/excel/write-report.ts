@@ -35,8 +35,9 @@ function styleSectionRow(
   sheet: import("exceljs").Worksheet,
   row: number,
   endColumn: number,
+  startColumn = 1,
 ): void {
-  for (let column = 1; column <= endColumn; column += 1) {
+  for (let column = startColumn; column <= endColumn; column += 1) {
     const cell = sheet.getCell(row, column);
     cell.style = {
       ...cell.style,
@@ -51,8 +52,9 @@ function styleHeaderRow(
   sheet: import("exceljs").Worksheet,
   row: number,
   endColumn: number,
+  startColumn = 1,
 ): void {
-  for (let column = 1; column <= endColumn; column += 1) {
+  for (let column = startColumn; column <= endColumn; column += 1) {
     const cell = sheet.getCell(row, column);
     cell.style = {
       ...cell.style,
@@ -220,7 +222,8 @@ function writeDetail(
   model: ReportModel,
 ): void {
   const layout = REPORT_LAYOUT.detail;
-  clearValues(sheet, 11, 200, 1, 10);
+  sheet.unMergeCells(`A${layout.legacyRootRow}:D${layout.legacyRootRow}`);
+  clearValues(sheet, 11, 200, 1, 12);
   sheet.getCell(layout.period).value = `${periodText(model)} • Red hesabı standardize edilmiş kök sebeplere göre hazırlanmıştır.`;
   if (!carrier) {
     sheet.name = `Detay ${String(slot).padStart(2, "0")}`;
@@ -258,48 +261,49 @@ function writeDetail(
     formatCount(sheet.getCell(row, 7));
   }
 
-  const rootSectionRow = Math.max(
-    layout.rootDefaultRow,
-    layout.productStartRow + carrier.products.length + 3,
-  );
-  if (rootSectionRow !== layout.rootDefaultRow) {
-    clearValues(sheet, layout.rootDefaultRow, layout.rootDefaultRow + 1, 1, 4);
-    sheet.mergeCells(`A${rootSectionRow}:D${rootSectionRow}`);
-  }
-  sheet.getCell(rootSectionRow, 1).value = "Kök Sebepler";
-  styleSectionRow(sheet, rootSectionRow, 4);
-  sheet.getCell(rootSectionRow + 1, 1).value = "Kök Sebep";
-  sheet.getCell(rootSectionRow + 1, 2).value = "Red Kaydı";
-  styleHeaderRow(sheet, rootSectionRow + 1, 2);
+  const rootSectionRow = layout.rootStartRow;
+  const rootColumn = layout.rootStartColumn;
+  sheet.getColumn(rootColumn).width = 42;
+  sheet.getColumn(rootColumn + 1).width = 12;
+  sheet.getColumn(rootColumn + 2).width = 12;
+  sheet.getColumn(rootColumn + 3).width = 14;
+  sheet.mergeCells(rootSectionRow, rootColumn, rootSectionRow, rootColumn + 3);
+  sheet.getCell(rootSectionRow, rootColumn).value = "Kök Sebepler";
+  styleSectionRow(sheet, rootSectionRow, rootColumn + 3, rootColumn);
+  sheet.getCell(rootSectionRow + 1, rootColumn).value = "Kök Sebep";
+  sheet.getCell(rootSectionRow + 1, rootColumn + 1).value = "Red Kaydı";
+  styleHeaderRow(sheet, rootSectionRow + 1, rootColumn + 1, rootColumn);
   carrier.rootCauses.forEach((cause, index) => {
     const row = rootSectionRow + 2 + index;
-    sheet.getCell(row, 1).value = cause.label;
-    sheet.getCell(row, 2).value = cause.count;
-    formatCount(sheet.getCell(row, 2));
+    sheet.getCell(row, rootColumn).value = cause.label;
+    sheet.getCell(row, rootColumn + 1).value = cause.count;
+    formatCount(sheet.getCell(row, rootColumn + 1));
   });
 
   if (carrier.specialBreakdown) {
     const specialRow = rootSectionRow + carrier.rootCauses.length + 4;
-    sheet.mergeCells(`A${specialRow}:D${specialRow}`);
-    sheet.getCell(specialRow, 1).value = "Ravago / Strene ve Diğer Operasyonlar";
-    styleSectionRow(sheet, specialRow, 4);
-    sheet.getRow(specialRow + 1).values = ["Kırılım", "Toplam", "Red", "Red Oranı"];
-    styleHeaderRow(sheet, specialRow + 1, 4);
+    sheet.mergeCells(specialRow, rootColumn, specialRow, rootColumn + 3);
+    sheet.getCell(specialRow, rootColumn).value = "Ravago / Strene ve Diğer Operasyonlar";
+    styleSectionRow(sheet, specialRow, rootColumn + 3, rootColumn);
+    ["Kırılım", "Toplam", "Red", "Red Oranı"].forEach((value, index) => {
+      sheet.getCell(specialRow + 1, rootColumn + index).value = value;
+    });
+    styleHeaderRow(sheet, specialRow + 1, rootColumn + 3, rootColumn);
     const groups = [
       ["Ravago / Strene", carrier.specialBreakdown.ravagoStrene],
       ["Ravago dışı", carrier.specialBreakdown.other],
     ] as const;
     groups.forEach(([label, values], index) => {
       const row = specialRow + 2 + index;
-      sheet.getRow(row).values = [
-        label,
-        values.registrations,
-        values.rejections,
-        values.registrations ? values.rejections / values.registrations : 0,
-      ];
-      formatCount(sheet.getCell(row, 2));
-      formatCount(sheet.getCell(row, 3));
-      setNumberFormat(sheet.getCell(row, 4), "0.0%");
+      sheet.getCell(row, rootColumn).value = label;
+      sheet.getCell(row, rootColumn + 1).value = values.registrations;
+      sheet.getCell(row, rootColumn + 2).value = values.rejections;
+      sheet.getCell(row, rootColumn + 3).value = values.registrations
+        ? values.rejections / values.registrations
+        : 0;
+      formatCount(sheet.getCell(row, rootColumn + 1));
+      formatCount(sheet.getCell(row, rootColumn + 2));
+      setNumberFormat(sheet.getCell(row, rootColumn + 3), "0.0%");
     });
   }
 }

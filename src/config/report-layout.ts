@@ -31,7 +31,9 @@ export const REPORT_LAYOUT = {
     rejectionRate: "G5",
     productStartRow: 11,
     hourStartRow: 11,
-    rootDefaultRow: 103,
+    rootStartRow: 32,
+    rootStartColumn: 9,
+    legacyRootRow: 103,
   },
 } as const;
 

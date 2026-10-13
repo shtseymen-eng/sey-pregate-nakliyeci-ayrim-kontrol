@@ -140,4 +140,44 @@ describe("Excel report output", () => {
       }),
     ).toBe("Terminal_Ilk20_01.01.2026_31.03.2026.xlsx");
   });
+
+  it("keeps root causes near the chart when a carrier has a long product list", async () => {
+    const records = Array.from({ length: 101 }, (_, index) =>
+      record(
+        "Uzun Ürünlü Firma",
+        (index % 20) + 1,
+        index % 24,
+        index === 0 ? "Red" : "Onaylandı",
+        `Ürün ${String(index + 1).padStart(3, "0")}`,
+        index === 0 ? "SRC5 yoktur" : "",
+      ),
+    );
+    const model = buildReportModel({
+      records,
+      statusRules: {},
+      importSummary: {
+        rowsRead: records.length,
+        rowsIncluded: records.length,
+        rowsExcludedDepartment: 0,
+        invalidRows: 0,
+        warnings: [],
+      },
+    });
+    const template = await fs.readFile(
+      path.join(process.cwd(), "public/templates/terminal-ilk20-template.xlsx"),
+    );
+    const bytes = await buildReportWorkbook(
+      model,
+      template.buffer.slice(template.byteOffset, template.byteOffset + template.byteLength),
+    );
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+
+    const detail = workbook.worksheets[3];
+    expect(detail.getCell("A111").value).toBeTruthy();
+    expect(detail.getCell("I32").value).toBe("Kök Sebepler");
+    expect(detail.getCell("I34").value).toBe("Sürücü SRC5 belgesi eksik");
+    expect(detail.getCell("J34").value).toBe(1);
+    expect(detail.getCell("A115").value).toBeNull();
+  });
 });
