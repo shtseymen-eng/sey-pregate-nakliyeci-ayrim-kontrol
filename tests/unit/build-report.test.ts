@@ -104,4 +104,28 @@ describe("buildReportModel", () => {
       }),
     ).toThrow("sınıflandırılmamış");
   });
+
+  it("counts each red reason once and labels red rows without a reason", () => {
+    const model = buildReportModel({
+      records: [
+        record(
+          "Firma A",
+          1,
+          8,
+          "Red",
+          "Ürün X",
+          "SRC5 yoktur; SRC 5 belgesi yoktur",
+        ),
+        record("Firma B", 1, 9, "Red", "Ürün Y", ""),
+        record("Firma C", 1, 10, "Onaylandı", "Ürün Z", "Firma adı ürün adı"),
+      ],
+      statusRules: {},
+      importSummary: { ...importSummary, rowsRead: 3, rowsIncluded: 3 },
+    });
+
+    expect(model.rootCauses.map((item) => [item.label, item.count])).toEqual([
+      ["Red nedeni belirtilmemiş", 1],
+      ["Sürücü SRC5 belgesi eksik", 1],
+    ]);
+  });
 });

@@ -21,41 +21,59 @@ export async function readWorkbook(
   if (!fileName.toLocaleLowerCase("tr-TR").endsWith(".xlsx")) {
     throw new Error("Yalnızca .xlsx dosyaları desteklenir.");
   }
+  const signature = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 2));
+  if (signature.length < 2 || signature[0] !== 0x50 || signature[1] !== 0x4b) {
+    throw new Error("Excel dosyası açılamadı. Dosya bozuk veya şifreli olabilir.");
+  }
 
   try {
-    const module = await import("exceljs");
-    const workbook = new module.default.Workbook();
-    await workbook.xlsx.load(buffer as Parameters<typeof workbook.xlsx.load>[0]);
+    const { read, utils } = await import("xlsx");
+    const workbook = read(new Uint8Array(buffer), {
+      type: "array",
+      cellDates: true,
+      cellFormula: false,
+      cellHTML: false,
+      cellStyles: false,
+      cellText: false,
+    });
 
     let best:
       | (WorkbookCandidate & { score: number; populatedRows: number })
       | undefined;
 
-    workbook.eachSheet((sheet) => {
-      const maxColumn = Math.max(sheet.columnCount, 1);
-      const scanLimit = Math.min(sheet.rowCount, 30);
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const sheetRows = utils.sheet_to_json<unknown[]>(sheet, {
+        header: 1,
+        raw: true,
+        blankrows: true,
+        defval: null,
+      });
+      const maxColumn = sheetRows.reduce((maximum, row) => Math.max(maximum, row.length), 1);
+      const scanLimit = Math.min(sheetRows.length, 30);
       for (let rowNumber = 1; rowNumber <= scanLimit; rowNumber += 1) {
         const headers = Array.from({ length: maxColumn }, (_, columnIndex) =>
-          String(displayValue(sheet.getRow(rowNumber).getCell(columnIndex + 1).value) ?? "").trim(),
+          String(displayValue(sheetRows[rowNumber - 1]?.[columnIndex]) ?? "").trim(),
         );
         const suggestion = suggestColumnMapping(headers);
         const matched = Object.keys(suggestion.mapping).length;
         const requiredMatched = 6 - suggestion.missingFields.length;
-        const populatedRows = Math.max(sheet.rowCount - rowNumber, 0);
+        const populatedRows = Math.max(sheetRows.length - rowNumber, 0);
         const score = requiredMatched * 100 + matched * 10 + Math.min(populatedRows, 99);
         if (requiredMatched < 3 || (best && best.score >= score)) continue;
 
-        const rows: unknown[][] = [];
-        for (let dataRow = rowNumber + 1; dataRow <= sheet.rowCount; dataRow += 1) {
-          const values = Array.from({ length: maxColumn }, (_, columnIndex) =>
-            displayValue(sheet.getRow(dataRow).getCell(columnIndex + 1).value),
+        const rows = sheetRows
+          .slice(rowNumber)
+          .map((sourceRow) =>
+            Array.from({ length: maxColumn }, (_, columnIndex) =>
+              displayValue(sourceRow[columnIndex]),
+            ),
+          )
+          .filter((values) =>
+            values.some((value) => value !== null && value !== undefined && value !== ""),
           );
-          if (values.some((value) => value !== null && value !== undefined && value !== "")) {
-            rows.push(values);
-          }
-        }
         best = {
-          sheetName: sheet.name,
+          sheetName,
           headerRowNumber: rowNumber,
           headers,
           rows,
@@ -64,7 +82,7 @@ export async function readWorkbook(
           populatedRows,
         };
       }
-    });
+    }
 
     if (!best) throw new Error("Veri sayfası veya başlık satırı bulunamadı.");
     return {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { normalizeRecords } from "@/analysis/normalize-records";
 import { buildReportModel } from "@/analysis/build-report";
 import { readWorkbook } from "@/excel/read-workbook";
@@ -84,4 +84,84 @@ describe("workbook import", () => {
     expect(model.totals).toMatchObject({ registrations: 2, rejections: 1 });
     expect(model.topCarriers.map((item) => item.name)).not.toContain("Dev Firma");
   });
+
+  it("opens hyperlink-heavy query exports without blocking the page", async () => {
+    const rows = Array.from({ length: 24_000 }, (_, index) => [
+      index + 1,
+      new Date(2026, 8, (index % 28) + 1, index % 24),
+      "",
+      "Kayıt yapan kullanıcı",
+      "Onay veren kullanıcı",
+      "Poliport Terminal",
+      {
+        text: `34TEST${String(index).padStart(5, "0")}`,
+        hyperlink: `http://internal-report/record/${index + 1}?transaction=${String(index).padStart(32, "0")}`,
+      },
+      "",
+      `34DORSE${index}`,
+      `KONTEYNER-${index}`,
+      30_000,
+      "L4BN",
+      "TIR TANKER",
+      "",
+      "Sürücü",
+      "Soyadı",
+      "5550000000",
+      `Nakliyeci ${index % 25}`,
+      "",
+      `Ürün ${index % 8}`,
+      `Firma ${index % 12}`,
+      "",
+      "Araç kayıt açıklaması",
+      index % 10 === 0 ? "Red" : "Onaylandı",
+      new Date(2026, 8, (index % 28) + 1, index % 24),
+      new Date(2026, 8, (index % 28) + 1, index % 24),
+      index % 10 === 0 ? "İptal eden" : "",
+      index % 10 === 0 ? "SRC5 yoktur" : "",
+    ]);
+    const bytes = await makeSyntheticWorkbook({
+      headers: [
+        "Kayıt No",
+        "Kayıt Tarihi",
+        "",
+        "Kayıt Yapan",
+        "Onay Veren",
+        "Departman",
+        "Plaka",
+        "",
+        "Dorse Plaka",
+        "Konteyner No",
+        "Tank Kapasite",
+        "Tank Kodu",
+        "Araç Tipi",
+        "",
+        "Sürücü Adı",
+        "Sürücü Soyadı",
+        "Sürücü Telefon Numarası",
+        "Nakliyeci",
+        "",
+        "Ürün Adı",
+        "Firma Adı",
+        "",
+        "Açıklama",
+        "Durum",
+        "Plan Tarihi",
+        "ISG Onay Tarihi",
+        "İptal Eden Kullanıcı Adı",
+        "Red Açıklaması",
+      ],
+      rows,
+    });
+    vi.doMock("exceljs", () => {
+      throw new Error("The report writer must not be used to read uploaded workbooks.");
+    });
+
+    const startedAt = performance.now();
+    const candidate = await readWorkbook(bytes, "Arac_Kayit_Sorgulama.xlsx");
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(candidate.rows).toHaveLength(24_000);
+    expect(candidate.suggestion.requiresUserMapping).toBe(false);
+    expect(elapsedMs).toBeLessThan(15_000);
+  }, 30_000);
 });

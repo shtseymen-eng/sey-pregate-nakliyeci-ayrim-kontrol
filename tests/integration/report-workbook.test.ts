@@ -71,6 +71,39 @@ describe("Excel report output", () => {
     expect(summary.getCell("J5").value).toBeCloseTo(2 / 3);
     expect(summary.getCell("J5").numFmt).toBe("0.0%");
     expect(summary.getCell("A10").fill).toMatchObject({ type: "pattern" });
+    const conditionalFormattings = (summary as unknown as {
+      conditionalFormattings: Array<{
+        ref: string;
+        rules: Array<{
+          type: string;
+          cfvo?: Array<{ type: string; value?: number }>;
+        }>;
+      }>;
+    }).conditionalFormattings;
+    expect(
+      conditionalFormattings.some(
+        (formatting) => formatting.ref === "J5" && formatting.rules.some((rule) => rule.type === "colorScale"),
+      ),
+    ).toBe(true);
+    const summaryRateRule = conditionalFormattings
+      .find((formatting) => formatting.ref === "J5")
+      ?.rules.find((rule) => rule.type === "colorScale");
+    expect(summaryRateRule?.cfvo).toEqual([
+      { type: "num", value: 0 },
+      { type: "num", value: 0.5 },
+      { type: "num", value: 1 },
+    ]);
+    expect(
+      conditionalFormattings.some(
+        (formatting) => formatting.ref === "D11:D30" && formatting.rules.some((rule) => rule.type === "colorScale"),
+      ),
+    ).toBe(true);
+
+    const roots = workbook.getWorksheet("Kök Sebep Analizi")!;
+    expect(roots.getCell("A6").value).toBe("Çekici ADR/T9 evrakı eksik");
+    expect(roots.getCell("A6").fill).toMatchObject({ type: "pattern", pattern: "none" });
+    expect(roots.getCell("D6").fill).toMatchObject({ type: "pattern", pattern: "none" });
+    expect(roots.getCell("E6").fill).toMatchObject({ type: "pattern", pattern: "none" });
 
     const firstDetail = workbook.worksheets[3];
     expect(firstDetail.getCell("A1").value).toContain("Firma A");
@@ -78,6 +111,8 @@ describe("Excel report output", () => {
     expect(firstDetail.getCell("B11").numFmt).toBe("#,##0");
     expect(firstDetail.getCell("F11").value).toBe("00:00");
     expect(firstDetail.getCell("G11").numFmt).toBe("#,##0");
+    expect(firstDetail.getCell("A11").fill).toMatchObject({ type: "pattern", pattern: "none" });
+    expect(firstDetail.getCell("F11").fill).toMatchObject({ type: "pattern", pattern: "none" });
     const lastDetail = workbook.worksheets[22];
     expect(lastDetail.getCell("A11").value).toBe("Bu dönem için veri yok");
   });

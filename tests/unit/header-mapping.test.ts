@@ -32,7 +32,7 @@ describe("suggestColumnMapping", () => {
     expect(result.mapping.department).toBe(1);
   });
 
-  it.each(["Red Açıklaması", "Kök Sebep"])(
+  it.each(["Red Açıklaması", "Kök Sebep", "İptal Açıklaması"])(
     "maps %s to rejection reason",
     (header) => {
       const result = suggestColumnMapping([

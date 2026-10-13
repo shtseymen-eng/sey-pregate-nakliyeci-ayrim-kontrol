@@ -39,6 +39,8 @@ export const COLUMN_ALIASES: Record<SemanticField, string[]> = {
   product: ["ürün", "ürün adı", "malzeme", "malzeme adı", "ürün cinsi"],
   status: ["durum", "statü", "kayıt durumu", "araç durumu", "son durum"],
   rejectionReason: [
+    "iptal açıklaması",
+    "iptal aciklamasi",
     "red açıklaması",
     "red açıklama",
     "red nedeni",

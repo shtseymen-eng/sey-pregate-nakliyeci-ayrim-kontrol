@@ -38,9 +38,12 @@ function styleSectionRow(
 ): void {
   for (let column = 1; column <= endColumn; column += 1) {
     const cell = sheet.getCell(row, column);
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: REPORT_COLORS.blue } };
-    cell.font = { name: "Arial", size: 10, bold: true, color: { argb: REPORT_COLORS.white } };
-    cell.alignment = { vertical: "middle" };
+    cell.style = {
+      ...cell.style,
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: REPORT_COLORS.blue } },
+      font: { name: "Arial", size: 10, bold: true, color: { argb: REPORT_COLORS.white } },
+      alignment: { vertical: "middle" },
+    };
   }
 }
 
@@ -51,22 +54,51 @@ function styleHeaderRow(
 ): void {
   for (let column = 1; column <= endColumn; column += 1) {
     const cell = sheet.getCell(row, column);
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: REPORT_COLORS.navy } };
-    cell.font = { name: "Arial", size: 10, bold: true, color: { argb: REPORT_COLORS.white } };
-    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-    cell.border = {
-      top: { style: "thin", color: { argb: REPORT_COLORS.white } },
-      left: { style: "thin", color: { argb: REPORT_COLORS.white } },
-      bottom: { style: "thin", color: { argb: REPORT_COLORS.white } },
-      right: { style: "thin", color: { argb: REPORT_COLORS.white } },
+    cell.style = {
+      ...cell.style,
+      fill: { type: "pattern", pattern: "solid", fgColor: { argb: REPORT_COLORS.navy } },
+      font: { name: "Arial", size: 10, bold: true, color: { argb: REPORT_COLORS.white } },
+      alignment: { horizontal: "center", vertical: "middle", wrapText: true },
+      border: {
+        top: { style: "thin", color: { argb: REPORT_COLORS.white } },
+        left: { style: "thin", color: { argb: REPORT_COLORS.white } },
+        bottom: { style: "thin", color: { argb: REPORT_COLORS.white } },
+        right: { style: "thin", color: { argb: REPORT_COLORS.white } },
+      },
     };
   }
+}
+
+function addRejectionRateGradient(
+  sheet: import("exceljs").Worksheet,
+  ref: string,
+  priority: number,
+): void {
+  sheet.addConditionalFormatting({
+    ref,
+    rules: [
+      {
+        type: "colorScale",
+        priority,
+        cfvo: [
+          { type: "num", value: 0 },
+          { type: "num", value: 0.5 },
+          { type: "num", value: 1 },
+        ],
+        color: [
+          { argb: "FF63BE7B" },
+          { argb: "FFFFEB84" },
+          { argb: "FFF8696B" },
+        ],
+      },
+    ],
+  });
 }
 
 function writeSummary(workbook: import("exceljs").Workbook, model: ReportModel): void {
   const layout = REPORT_LAYOUT.summary;
   const sheet = workbook.getWorksheet(layout.sheet)!;
-  sheet.getCell(layout.period).value = `${periodText(model)} • Pregate kaydı, sırada ve beklemede durumları red hesabına dahil değildir. Bir kayıt birden fazla kök sebep içerirse her sebepte ayrı sayılır.`;
+  sheet.getCell(layout.period).value = `${periodText(model)} • Pregate kaydı, sırada ve beklemede durumları red hesabına dahil değildir. Aynı kayıttaki aynı kök sebep yalnızca bir kez sayılır.`;
   sheet.getCell(layout.carriers).value = model.totals.carriers;
   formatCount(sheet.getCell(layout.carriers));
   sheet.getCell(layout.registrations).value = model.totals.registrations;
@@ -75,6 +107,12 @@ function writeSummary(workbook: import("exceljs").Workbook, model: ReportModel):
   formatCount(sheet.getCell(layout.rejections));
   sheet.getCell(layout.rejectionRate).value = model.totals.rejectionRate;
   setNumberFormat(sheet.getCell(layout.rejectionRate), "0.0%");
+  addRejectionRateGradient(sheet, layout.rejectionRate, 1);
+  addRejectionRateGradient(
+    sheet,
+    `D${layout.rankingStartRow}:D${layout.rankingEndRow}`,
+    2,
+  );
   clearValues(sheet, layout.rankingStartRow, layout.rankingEndRow, 1, 10);
   for (let index = 0; index < model.topCarriers.length; index += 1) {
     const carrier = model.topCarriers[index];

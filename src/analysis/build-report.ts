@@ -26,8 +26,17 @@ function aggregateRootCauses(records: ClassifiedRecord[]): RootCauseTotal[] {
   const totals = new Map<string, RootCauseTotal>();
   for (const item of records) {
     if (item.disposition !== "red") continue;
-    for (const reason of splitAndNormalizeRootCauses(item.record.rejectionReason)) {
-      const key = `${reason.matched ? "matched" : "raw"}:${reason.label}`;
+    const parsed = splitAndNormalizeRootCauses(item.record.rejectionReason);
+    const reasons = parsed.length
+      ? parsed
+      : [{ id: "missing", label: "Red nedeni belirtilmemiş", matched: false }];
+    const seenInRecord = new Set<string>();
+    for (const reason of reasons) {
+      const key = reason.matched
+        ? `matched:${reason.id}`
+        : `raw:${normalizeForComparison(reason.label)}`;
+      if (seenInRecord.has(key)) continue;
+      seenInRecord.add(key);
       const total = totals.get(key);
       if (total) total.count += 1;
       else totals.set(key, { label: reason.label, count: 1, matched: reason.matched });
