@@ -128,4 +128,45 @@ describe("buildReportModel", () => {
       ["Sürücü SRC5 belgesi eksik", 1],
     ]);
   });
+
+  it("separates total registrations from actual rejections for terminal statuses", () => {
+    const model = buildReportModel({
+      records: [
+        record("Firma A", 1, 8, "Kapı Çıkış Tamamlandı.", "Ürün X"),
+        record(
+          "Firma A",
+          1,
+          9,
+          "Sürücü isteği ile kayıt silindi",
+          "Ürün X",
+          "Sürücü isteği ile kayıt silindi",
+        ),
+        record(
+          "Firma A",
+          1,
+          10,
+          "Pregate kaydi yapildi.",
+          "Ürün X",
+          "Pregate kaydi yapildi.",
+        ),
+        record("Firma A", 1, 11, "Sevkiyat Onayı Verildi", "Ürün X"),
+      ],
+      statusRules: {},
+      importSummary: { ...importSummary, rowsRead: 4, rowsIncluded: 4 },
+    });
+
+    expect(model.totals).toMatchObject({
+      registrations: 4,
+      rejections: 1,
+      rejectionRate: 0.25,
+    });
+    expect(model.topCarriers[0]).toMatchObject({
+      registrations: 4,
+      rejections: 1,
+      rejectionRate: 0.25,
+    });
+    expect(model.rootCauses.map((item) => [item.label, item.count])).toEqual([
+      ["Firma talebi / iptal", 1],
+    ]);
+  });
 });

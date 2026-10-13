@@ -26,4 +26,23 @@ describe("root cause normalization", () => {
     ]);
     expect(splitAndNormalizeRootCauses(" ")).toEqual([]);
   });
+
+  it("groups carrier, driver, wrong-site and overtime cancellations as company requests", () => {
+    const matches = splitAndNormalizeRootCauses(
+      "Nakliyeci iptali; Yanlış tesise geldi; Sürücü isteği ile kayıt silindi; Mesai onayı yok; Sürücü kaydını sildirdi; Firma yarına erteledi; Hatalı kayıt; Sürücü talebi; Yükleme yarın olacak",
+    );
+
+    expect(matches.map((item) => item.label)).toEqual([
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+      "Firma talebi / iptal",
+    ]);
+    expect(matches.every((item) => item.matched)).toBe(true);
+  });
 });
