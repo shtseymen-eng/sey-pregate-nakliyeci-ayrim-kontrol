@@ -77,27 +77,42 @@ describe("Excel report output", () => {
         rules: Array<{
           type: string;
           cfvo?: Array<{ type: string; value?: number }>;
+          color?: { argb?: string };
+          gradient?: boolean;
+          showValue?: boolean;
         }>;
       }>;
     }).conditionalFormattings;
     expect(
       conditionalFormattings.some(
-        (formatting) => formatting.ref === "J5" && formatting.rules.some((rule) => rule.type === "colorScale"),
+        (formatting) => formatting.ref === "J5" && formatting.rules.some((rule) => rule.type === "dataBar"),
       ),
     ).toBe(true);
     const summaryRateRule = conditionalFormattings
       .find((formatting) => formatting.ref === "J5")
-      ?.rules.find((rule) => rule.type === "colorScale");
+      ?.rules.find((rule) => rule.type === "dataBar");
     expect(summaryRateRule?.cfvo).toEqual([
       { type: "num", value: 0 },
-      { type: "num", value: 0.5 },
       { type: "num", value: 1 },
     ]);
+    expect(summaryRateRule?.color).toMatchObject({ argb: "FFEF4444" });
+    expect(summaryRateRule?.gradient).not.toBe(false);
+    expect(summaryRateRule?.showValue).not.toBe(false);
+    expect(summary.getCell("J5").fill).toMatchObject({
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFFFFF" },
+    });
     expect(
       conditionalFormattings.some(
-        (formatting) => formatting.ref === "D11:D30" && formatting.rules.some((rule) => rule.type === "colorScale"),
+        (formatting) => formatting.ref === "D11:D30" && formatting.rules.some((rule) => rule.type === "dataBar"),
       ),
     ).toBe(true);
+    expect(summary.getCell("D11").fill).toMatchObject({
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFFFFFFF" },
+    });
 
     const roots = workbook.getWorksheet("Kök Sebep Analizi")!;
     expect(roots.getCell("A6").value).toBe("Çekici ADR/T9 evrakı eksik");

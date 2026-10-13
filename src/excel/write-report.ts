@@ -69,30 +69,41 @@ function styleHeaderRow(
   }
 }
 
-function addRejectionRateGradient(
+function addRejectionRateDataBar(
   sheet: import("exceljs").Worksheet,
   ref: string,
   priority: number,
 ): void {
+  sheet.removeConditionalFormatting((formatting: { ref: string }) => formatting.ref !== ref);
   sheet.addConditionalFormatting({
     ref,
     rules: [
       {
-        type: "colorScale",
+        type: "dataBar",
         priority,
+        gradient: true,
+        showValue: true,
+        color: { argb: "FFEF4444" },
         cfvo: [
           { type: "num", value: 0 },
-          { type: "num", value: 0.5 },
           { type: "num", value: 1 },
         ],
-        color: [
-          { argb: "FF63BE7B" },
-          { argb: "FFFFEB84" },
-          { argb: "FFF8696B" },
-        ],
+      } as import("exceljs").ConditionalFormattingRule & {
+        color: { argb: string };
       },
     ],
   });
+}
+
+function setWhiteFill(cell: import("exceljs").Cell): void {
+  cell.style = {
+    ...cell.style,
+    fill: {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: REPORT_COLORS.white },
+    },
+  };
 }
 
 function writeSummary(workbook: import("exceljs").Workbook, model: ReportModel): void {
@@ -107,12 +118,6 @@ function writeSummary(workbook: import("exceljs").Workbook, model: ReportModel):
   formatCount(sheet.getCell(layout.rejections));
   sheet.getCell(layout.rejectionRate).value = model.totals.rejectionRate;
   setNumberFormat(sheet.getCell(layout.rejectionRate), "0.0%");
-  addRejectionRateGradient(sheet, layout.rejectionRate, 1);
-  addRejectionRateGradient(
-    sheet,
-    `D${layout.rankingStartRow}:D${layout.rankingEndRow}`,
-    2,
-  );
   clearValues(sheet, layout.rankingStartRow, layout.rankingEndRow, 1, 10);
   for (let index = 0; index < model.topCarriers.length; index += 1) {
     const carrier = model.topCarriers[index];
@@ -133,6 +138,16 @@ function writeSummary(workbook: import("exceljs").Workbook, model: ReportModel):
     setNumberFormat(sheet.getCell(row, 4), "0.0%");
     setNumberFormat(sheet.getCell(row, 6), "#,##0.0");
   }
+  ["J5", "K5", "J6", "K6"].forEach((address) => setWhiteFill(sheet.getCell(address)));
+  for (let row = layout.rankingStartRow; row <= layout.rankingEndRow; row += 1) {
+    setWhiteFill(sheet.getCell(row, 4));
+  }
+  addRejectionRateDataBar(sheet, layout.rejectionRate, 1);
+  addRejectionRateDataBar(
+    sheet,
+    `D${layout.rankingStartRow}:D${layout.rankingEndRow}`,
+    2,
+  );
 }
 
 function writeRootCauses(workbook: import("exceljs").Workbook, model: ReportModel): void {
