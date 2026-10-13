@@ -5,6 +5,7 @@ coverage/
 .DS_Store
 .env*
 .superpowers/
+.worktrees/
 uploads/
 downloads/
 outputs/
