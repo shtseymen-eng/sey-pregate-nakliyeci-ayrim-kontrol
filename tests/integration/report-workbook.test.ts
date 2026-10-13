@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import ExcelJS from "exceljs";
+import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { buildReportModel } from "@/analysis/build-report";
 import { buildReportFileName } from "@/excel/build-file-name";
@@ -51,6 +52,24 @@ describe("Excel report output", () => {
       model,
       template.buffer.slice(template.byteOffset, template.byteOffset + template.byteLength),
     );
+    const zip = await JSZip.loadAsync(bytes);
+    const chartNames = Object.keys(zip.files)
+      .filter((name) => /^xl\/charts\/chart\d+\.xml$/.test(name))
+      .sort();
+    const drawingNames = Object.keys(zip.files)
+      .filter((name) => /^xl\/drawings\/drawing\d+\.xml$/.test(name))
+      .sort();
+    expect(chartNames).toHaveLength(3);
+    expect(drawingNames).toHaveLength(3);
+    const overallChart = await zip.file("xl/charts/chart1.xml")!.async("text");
+    expect(overallChart).toContain("Saatlik Kayıt Yoğunluğu");
+    expect(overallChart).toContain("'Saat Yoğunluk'!$A$6:$A$29");
+    expect(overallChart).toContain("'Saat Yoğunluk'!$B$6:$B$29");
+    expect(overallChart).toContain('<c:barDir val="col"/>');
+    expect(overallChart).toContain('<c:showVal val="1"/>');
+    const firstDetailChart = await zip.file("xl/charts/chart2.xml")!.async("text");
+    expect(firstDetailChart).toContain("'1. Firma A'!$F$11:$F$34");
+    expect(firstDetailChart).toContain("'1. Firma A'!$G$11:$G$34");
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(bytes as unknown as Parameters<typeof workbook.xlsx.load>[0]);
 

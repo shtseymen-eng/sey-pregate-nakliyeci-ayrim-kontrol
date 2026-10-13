@@ -1,4 +1,5 @@
 import { REPORT_COLORS, REPORT_LAYOUT } from "@/config/report-layout";
+import { addHourlyCharts } from "@/excel/add-hourly-charts";
 import { formatReportDate } from "@/excel/build-file-name";
 import { makeUniqueSheetName } from "@/excel/sheet-names";
 import type { CarrierReport, ReportModel } from "@/types/report";
@@ -338,5 +339,5 @@ export async function buildReportWorkbook(
   workbook.creator = "Sey-Pregate Nakliyeci Ayrım Kontrol";
   workbook.modified = new Date();
   const output = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(output);
+  return addHourlyCharts(new Uint8Array(output), model);
 }
